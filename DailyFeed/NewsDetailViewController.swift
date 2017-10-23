@@ -50,35 +50,14 @@ class NewsDetailViewController: UIViewController, SFSafariViewControllerDelegate
     typealias JSONDict = [String : Any]
     var summary : Array<SummaryModel> = []
     var articles : Array<Article> = []
+    let summarySize = 5
     
     // SMMRY API
     func smmryRequest (url : String) {
-        let request = "http://api.smmry.com/&SM_API_KEY=FBD2CB310A&SM_WITH_BREAK&SM_LENGTH=5&SM_URL=\(url)"
         
-//        let params = [
-//            "source" : "ign",
-//            "apiKey" : "b6ad5635af024cfc918e7d5cff6674bb",
-//            "sortBy" : "top" // or "latest"
-//        ]
-        
-//        Alamofire.request("https://newsapi.org/v1/articles", parameters: params, encoding: URLEncoding(), headers: nil).responseJSON { response in
-//
-//
-//            if let responseJSON = response.result.value as? JSONDict {
-//                if let articleArray = responseJSON["articles"] as? Array<JSONDict> {
-//                    for articleData in articleArray {
-//
-//                        // if the articleData does not work, move onto the next
-//                        guard let article = Mapper<Article>().map(JSON: articleData) else { continue }
-//                        self.articles.append(article)
-//                        self.contentTextView.text = self.articles[0].title
-//                    }
-//                }
-//            }
-//        }
+        let request = "http://api.smmry.com/&SM_API_KEY=FBD2CB310A&SM_WITH_BREAK&SM_LENGTH=\(summarySize)&SM_URL=\(url)"
         
         Alamofire.request(request, encoding: URLEncoding(), headers: nil).responseJSON { response in
-            
             
             if let responseJSON = response.result.value as? JSONDict {
                 // if the articleData does not work, move onto the next
@@ -111,7 +90,13 @@ class NewsDetailViewController: UIViewController, SFSafariViewControllerDelegate
 
 @IBOutlet weak var newsAuthorLabel: UILabel! {
     didSet {
-        newsAuthorLabel.text = receivedNewsItem?.author
+        
+        // fix
+        guard let publishedDate = receivedNewsItem?.publishedAt.dateFromTimestamp?.relativelyFormatted(short: false) else {
+            return // newsAuthorLabel.text("Full article...", for: .normal)
+        }
+        
+        newsAuthorLabel.text = "\(receivedNewsItem?.author ?? "X minutes ago.") • \(publishedDate)"
         newsAuthorLabel.alpha = 0.0
         if isLanguageRightToLeftDetailView {
             newsAuthorLabel.textAlignment = .right
@@ -141,11 +126,9 @@ class NewsDetailViewController: UIViewController, SFSafariViewControllerDelegate
 
 @IBOutlet weak var swipeLeftButton: UIButton! {
     didSet {
-        guard let publishedDate = receivedNewsItem?.publishedAt.dateFromTimestamp?.relativelyFormatted(short: false) else {
-            return swipeLeftButton.setTitle("Full article...", for: .normal)
-        }
+        
         swipeLeftButton.layer.cornerRadius = 10.0
-        swipeLeftButton.setTitle("\(publishedDate) • Full article...", for: .normal)
+        swipeLeftButton.setTitle("Summarized in \(summarySize) sentences • Full article...", for: .normal)
         switch Reach().connectionStatus() {
         case .unknown, .offline:
             swipeLeftButton.isEnabled = false
